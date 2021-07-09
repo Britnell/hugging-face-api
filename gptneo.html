@@ -1,0 +1,169 @@
+<html><head>
+    <title> Hugging Face </title>
+	<style>
+        
+        body {
+            
+        }
+        #cont {
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+
+        }
+
+        textarea {
+            width: 100%;
+            height: 65vh;
+        }
+
+        #cont div {
+            flex: 1 0 auto;
+        }
+        
+
+	</style>
+</head>
+
+    <body>
+        <div>
+
+            <h2>GPT-Neo text generation</h2>      
+            <p>NLP model testing with hugging-face - <a href="https://api-inference.huggingface.co/dashboard/">Dashboard</a> </p>
+            <p>See this <a href="https://huggingface.co/blog/few-shot-learning-gpt-neo-and-inference-api">Guide</a> </p>
+            <p> 
+                Model : <a href="https://huggingface.co/EleutherAI/gpt-neo-2.7B">GPT-Neo</a>
+                text-generation </p>
+        </div>
+        <div id="container">
+
+            <div >
+
+                <div>
+                    <div>Max tokens : <label id="max_lb"></label></div>
+                    <input id="max_sl" type="range" value="25" min="10" max="200" >
+                </div>
+
+                <div>
+                    <div>Temperature : <label id="tmp_lb"></label></div>
+                    <input id="tmp_sl" type="range" value="50" min="0" max="100" >
+                </div>
+
+                <div>
+                    <div>End sequence : <input id="end_seq" type="text" value="#" >
+                    </div>  
+                </div>
+
+                <div id="querylen"></div>
+                <div><button id="submit">Submit</button></div>
+
+            </div>
+
+            <div id="cont">
+                <div>
+                    <div>QUERY</div>
+                    <textarea autofocus id="query" ></textarea>
+                </div>
+                <div>
+                    <div>GEN</div>
+                    <textarea id="texts"></textarea>
+                </div>
+            </div>
+            
+        </div>
+        
+        <script>
+            const submit = document.getElementById('submit')
+            const query = document.getElementById('query')
+            const ending = document.getElementById('end_seq')
+            const len = document.getElementById('querylen')
+
+            const model = 'https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B'
+            
+            const max_tokens = {
+                value: 0,
+                slider: document.getElementById('max_sl'),
+                label: document.getElementById('max_lb'),
+                update: function(){
+                    this.value = this.slider.value
+                    this.label.textContent = this.slider.value
+                }
+            }
+            max_tokens.slider.oninput = ()=>max_tokens.update()
+            max_tokens.update()
+            
+            function temp_slider_conv(v){
+                let x;
+                if(v<=50){
+                    x = scale(v,0,50,0,1)
+                    x = Math.floor(x*20)/20
+                } 
+                else {
+                    x = scale(v,50,100,1,100)
+                    x = Math.floor(x/5)*5
+                    if(x==0) x=1
+                }
+                return x 
+            }
+
+            const temp = {
+                value: 0,
+                slider: document.getElementById('tmp_sl'),
+                label: document.getElementById('tmp_lb'),
+                update: function(){ 
+                    this.value = temp_slider_conv(temp.slider.value)
+                    temp.label.textContent = this.value
+                 }
+            }
+            temp.slider.oninput = ()=>temp.update()
+            temp.update()
+
+            function scale(x,min,max,omin,omax){
+                let p = (x-min) / (max-min)
+                return omin + p * (omax-omin)
+            }
+
+            function force_float(x){
+                if(x.indexOf('.')==-1)
+                    x += '.0'
+                return x
+            }
+
+            submit.onclick = function(ev){
+                let mod = encodeURIComponent(model)
+                let q = encodeURIComponent(query.value)
+
+                let max = parseInt(max_tokens.value)
+                let tmp = parseFloat(temp.value)
+                let end = encodeURIComponent(ending.value)
+
+                let uri = `/qneo?model=${mod}&query=${q}&max=${max}&temp=${tmp}&end=${end}`
+                console.log(' :: ',uri )
+                fetch(uri)
+                    .then(res => res.json() )
+                    .then( data => generated_text(data) )
+                    .catch(err => console.log(' fetch error ', err) )
+
+                submit.disabled = true
+            }
+
+            function generated_text(data){
+                // console.log(' GENERATED : ', data )
+                submit.disabled = false
+                
+                data.forEach((d)=>{
+                    texts.value += d.generated_text + '\n'
+                })
+            }
+
+            query.addEventListener('input',()=>{
+                len.textContent = ` : ${query.value.length} char`
+            })
+
+            
+        </script>
+
+
+
+    </body>
+</html>

@@ -1,0 +1,116 @@
+<html><head>
+    <title> Hugging Face </title>
+	<style>
+        
+        #container {
+            width: 90%;
+            margin-left: 5%;
+            display: flex;
+            flex-direction: row;
+        }
+
+        #container div {
+            flex: 1 1 auto;
+        }
+        #container textarea {
+            width: 100%;
+            /* height: 50vh; */
+        }
+
+
+
+	</style>
+</head>
+
+    <body>
+        <h2>Fill in the ______</h2>      
+        <p>NLP model testing with hugging-face - <a href="https://api-inference.huggingface.co/dashboard/">Dashboard</a> </p>
+        <p> Model : <a href="https://huggingface.co/bert-base-uncased">Bert Base uncased</a></p>
+        <p>Text completion <a href="https://api-inference.huggingface.co/docs/python/html/detailed_parameters.html#fill-mask-task">see parameters</a> </p>
+        <p>Fill in the _.</p>
+        <div>
+
+            <div >
+                <!-- <label>GPT2</label> -->
+
+                <div><button id="submit">Submit</button></div>
+                <div id="querylen"></div>
+            </div>
+            <div id="container">
+                <div>
+                    <textarea autofocus id="query" placeholder="Fill in the _." ></textarea>
+                </div>
+                <div id="texts">    
+                    <!-- <textarea id="texts"></textarea> -->
+                </div>
+            </div>
+            
+        </div>
+        
+        <script>
+            const query = document.getElementById('query')
+            const texts = document.getElementById('texts')
+            const len = document.getElementById('querylen')
+
+            const model = 'https://api-inference.huggingface.co/models/bert-base-uncased'
+
+            function scale(x,min,max,omin,omax){
+                let p = (x-min) / (max-min)
+                return omin + p * (omax-omin)
+            }
+
+            function force_float(x){
+                if(x.indexOf('.')==-1)
+                    x += '.0'
+                return x
+            }
+
+            document.getElementById('submit').onclick = function(ev){
+                let mod = encodeURI(model)
+                
+                let q = add_mask(query.value)
+                if(q){
+                    q = encodeURI(q)
+                    let uri = `/qmask?model=${mod}&query=${q}`
+                    console.log(' :: ',uri )
+                    fetch(uri)
+                        .then(res => res.json() )
+                        .then( data => generated_text(data) )
+                        .catch(err => console.log(' fetch error ', err) )
+                }
+            }
+
+            function add_mask(txt){
+                let i = txt.indexOf('_')
+                if(i!==-1){
+                    return txt.slice(0,i) + '[MASK]' + txt.slice(i+1)
+                }
+                else {
+                    console.log(' ERROR, NO GAP')
+                }
+            }
+
+            function generated_text(data){
+                // console.log(' GENERATED : ', data )
+                data.forEach((d)=>{
+                    let first = texts.childNodes[0]
+                    let p = document.createElement('div')
+                    p.textContent = d.sequence
+                    if(first)
+                        texts.insertBefore(p,first)
+                    else 
+                        texts.appendChild(p)
+                })
+            }
+
+            query.addEventListener('input',()=>{
+                len.textContent = ` : ${query.value.length} char`
+            })
+
+            
+        </script>
+
+
+
+    </body>
+</html>

@@ -1,0 +1,151 @@
+<html><head>
+    <title> Hugging Face </title>
+	<style>
+        
+        #container {
+            margin-left: 20%;
+            width: 60%;
+        }
+
+        #query {
+            width: 100%;
+            height: 50vh;
+        }
+
+        #texts {
+            width: 100%;
+            height: 50vh;
+        }
+
+	</style>
+</head>
+
+    <body>
+        <h2>GPT-2 text-text generation</h2>      
+        <p>NLP model testing with hugging-face - <a href="https://api-inference.huggingface.co/dashboard/">Dashboard</a> </p>
+        <p> 
+            Model : <a href="https://huggingface.co/gpt2">GPT2</a>
+            text-generation, 
+            <a href="https://api-inference.huggingface.co/docs/python/html/detailed_parameters.html#text-generation-task">see parameters</a> </p>
+        <div id="container">
+
+            <div >
+                <!-- <label>GPT2</label> -->
+                <div>
+                    <div>Num of sequences : <label id="num_seq_lb"></label></div>
+                    <input id="num_seq_sl" type="range" value="3" min="1" max="10" >
+                </div>
+                
+                <div>
+                    <div>Length : <label id="len_lb"></label></div>
+                    <input id="len_sl" type="range" value="250" min="1" max="250" >
+                </div>
+
+                <div>
+                    <div>Temperature : <label id="tmp_lb"></label></div>
+                    <input id="tmp_sl" type="range" value="50" min="0" max="100" >
+                </div>
+
+                <div id="querylen"></div>
+                <div><button id="submit">Submit</button></div>
+                <textarea autofocus id="query" ></textarea>
+                <textarea id="texts"></textarea>
+            </div>
+            
+        </div>
+        
+        <script>
+            const query = document.getElementById('query')
+            const texts = document.getElementById('texts')
+            const len = document.getElementById('querylen')
+
+            const model = 'https://api-inference.huggingface.co/models/gpt2'
+            
+            const num_seq = {
+                slider: document.getElementById('num_seq_sl'),
+                label: document.getElementById('num_seq_lb'),
+                update: function(){
+                    num_seq.label.textContent = num_seq.slider.value
+                }
+            }
+            num_seq.slider.oninput = ()=>num_seq.update()
+            num_seq.update()
+
+            const lengther = {
+                slider: document.getElementById('len_sl'),
+                label: document.getElementById('len_lb'),
+                update: function(){
+                    lengther.label.textContent = lengther.slider.value
+                }
+            }
+            lengther.slider.oninput = ()=>lengther.update()
+            lengther.update()
+            
+            function temp_slider_conv(v){
+                let x;
+                if(v<=50){
+                    x = scale(v,0,50,0,1)
+                    x = Math.floor(x*20)/20
+                } 
+                else {
+                    x = scale(v,50,100,1,100)
+                    x = Math.floor(x/5)*5
+                    if(x==0) x=1
+                }
+                return x 
+            }
+
+            const temp = {
+                slider: document.getElementById('tmp_sl'),
+                label: document.getElementById('tmp_lb'),
+                update: function(){ 
+                    let x = temp_slider_conv(temp.slider.value)
+                    temp.label.textContent = x
+                 }
+            }
+            temp.slider.oninput = ()=>temp.update()
+            temp.update()
+
+            function scale(x,min,max,omin,omax){
+                let p = (x-min) / (max-min)
+                return omin + p * (omax-omin)
+            }
+
+            function force_float(x){
+                if(x.indexOf('.')==-1)
+                    x += '.0'
+                return x
+            }
+            document.getElementById('submit').onclick = function(ev){
+                let mod = encodeURI(model)
+                let q = encodeURI(query.value)
+                let seqs = parseInt(num_seq.slider.value)
+                let len = parseInt(lengther.slider.value )
+                let tmp = parseFloat(temp_slider_conv(temp.slider.value))
+
+                let uri = `/qgpt2?model=${mod}&query=${q}&seqs=${seqs}&len=${len}&temp=${tmp}`
+                // console.log(' :: ',uri )
+                fetch(uri)
+                    .then(res => res.json() )
+                    .then( data => generated_text(data) )
+                    .catch(err => console.log(' fetch error ', err) )
+            }
+
+            function generated_text(data){
+                // console.log(' GENERATED : ', data )
+                data.forEach((d)=>{
+                    texts.value += '\n\n#\n\n' + d.generated_text
+                })
+            }
+
+            query.addEventListener('input',()=>{
+                len.textContent = ` : ${query.value.length} char`
+            })
+
+            
+        </script>
+
+
+
+    </body>
+</html>
